@@ -1,0 +1,7 @@
+# dsh bundle patch：把本插件作为一行挂进 profile 的 layer 栈。
+#
+# id 用包名即可（本插件没有设置命名空间，命名空间那套要求 entry id == 命名空间名，
+# 见 qq-bridge 的 plugins/qq-mode-console/cordis.patch.yml 里的长注释）。
+- insert:
+    - id: dsh-qq-console
+      name: 'dsh-qq-console'

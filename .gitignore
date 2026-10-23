@@ -1,0 +1,14 @@
+# 从 DSH app.asar 解出来的框架参考包（第三方代码，不分发）
+refs/
+
+node_modules/
+*.log
+
+# 本机私有文件
+*.local
+.env
+
+# 系统噪声
+.DS_Store
+Thumbs.db
+desktop.ini

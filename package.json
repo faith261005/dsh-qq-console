@@ -1,0 +1,43 @@
+{
+  "name": "dsh-qq-console",
+  "version": "0.1.0",
+  "private": true,
+  "description": "在 DSH 设置页里控制本机的 qq-bridge：桥接开关、白名单增删、响应速度、等待锁参数。",
+  "type": "module",
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./client/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "license": "MIT",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-settings"
+      ]
+    }
+  },
+  "author": "faith261005",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/faith261005/dsh-qq-console.git"
+  },
+  "homepage": "https://github.com/faith261005/dsh-qq-console#readme",
+  "bugs": {
+    "url": "https://github.com/faith261005/dsh-qq-console/issues"
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "qq-bridge",
+    "onebot",
+    "qq",
+    "settings-panel"
+  ]
+}
