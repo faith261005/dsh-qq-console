@@ -6,6 +6,10 @@
  * 鉴权：离线铸造浏览器会话 Cookie（同桥接的做法）。
  * 用法：node tools/browser-check.mjs [BASE_URL]
  * 退出码 0 = 面板渲染正常。
+ *
+ * 注意（2026-10-25 血的教训）：**绝不要用 PowerShell 5.1 的 Get-Content/Set-Content 或
+ * -Raw + WriteAllText 去改这个文件** —— 它按 GBK 读、按 UTF-8 写回，中文会双重编码、文件当场损坏。
+ * 本次就是这么坏过一次，靠逐行重写恢复的。改中文内容一律用编辑工具或 node。
  */
 import { createRequire } from 'node:module';
 import { existsSync } from 'node:fs';
@@ -63,7 +67,7 @@ try {
   await page.waitForFunction(() => (document.body?.innerText ?? '').length > 200, { timeout: 90000 });
   await sleep(2500);
 
-  // 关掉「预览版说明」与「插件已热重载 → 刷新页面」
+  // 关掉「预览版说明」与「插件已热重载 → 刷新页面」这类提示（有就点）
   for (const label of ['刷新页面', '继续', '知道了']) {
     const hit = await clickText(label, { exact: true });
     if (hit) { console.log(`关掉提示「${label}」`); await sleep(3000); }
@@ -93,7 +97,7 @@ try {
       cands[0].click();
       return cands[0].innerText.trim().slice(0, 30);
     });
-    console.log('  点「设置」->', hit);
+    console.log('  点「设置」>', hit);
     await sleep(3000);
     body = await text();
     hasMine = body.includes('QQ 桥接');
@@ -123,7 +127,12 @@ try {
     if (box) { await page.mouse.click(box.x, box.y); }
     await sleep(3500);
     body = await text();
-    const markers = ['① 开关与状态', '② 白名单', '③ 响应速度', '④ 等待锁', '保存白名单', '保存等待锁参数', '暂停 AI 活动'];
+    const markers = [
+      '① 开关与状态', '② 白名单', '③ 响应速度', '④ 等待锁', '⑤ 插件工具白名单',
+      '⑥ 发语音（TTS → QQ）', '⑦ 语音发送限制（调试）',
+      '整套启停', '整套停止', '整套启动（含语音）',          // 2026-10-25 新增：整套 QQ 栈启停
+      '保存白名单', '保存等待锁参数', '暂停 AI 活动',
+    ];
     const seen = markers.filter((m) => body.includes(m));
     console.log('  面板标记:', seen.join(' / ') || '（无）');
     console.log('  显示了桥接状态行:', /在线（模式|离线/.test(body));

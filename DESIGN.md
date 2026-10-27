@@ -73,6 +73,38 @@ qq-bridge 自带的控制台（`http://127.0.0.1:3100`，请求头 `x-console-to
 另设一个只读信息块：**当前被接管的等待记录**（最近 N 条，从 `state/bridge.log` 里筛 `[wait]`）——
 这是排「等待锁卡住」的第一手证据。
 
+### ⑦ 语音发送限制（调试）
+
+桥接的 `socialV2.voice` 有一整套限制，但散在 `config.json` 里、且**没有任何 UI 会说
+「这一条现在会不会被拒」**。这一组补的就是可写 + 可诊断。
+
+| 键 | 含义 | 默认 | 可写 |
+| --- | --- | --- | --- |
+| `enabled` | AI 能不能发语音的总闸 | `false` | ✅（操作者通道不受影响） |
+| `maxSeconds` / `maxBytes` | 单条时长 / 体积上限 | 300 秒 / 20 MB | ✅ |
+| `maxPerMinute` / `maxPerHour` | 频率上限，**0 = 不限** | 2 / 10 | ✅ |
+| `defaultVolume` / `loudness` | 默认音量倍数 / 智能音量档位 | 1 / normal | ✅ |
+| `autoReadback` | 发送后回读 record 段做落地校验 | `true` | ✅ |
+| `allowAbsolutePath` | 绝对路径（对 AI 通道已不再放宽） | `false` | ✅（只读展示语义） |
+| `dir` / `ffmpegPath` | 语音库目录 / ffmpeg 位置 | `audio` / 空 | ❌ 只读 |
+
+**写入必须整份回写**：桥接的 `POST /api/socialV2/config` 对 `voice` 是浅合并，落地时
+`cfg.socialV2 = {...cfg.socialV2, ...merged}` 会把提交的 `voice` **整体替换**运行时那一份，
+只发补丁会抹掉 `dir` / `ffmpegPath` / `loudness`。所以：读全量 → 合并补丁 → 整份 POST。
+
+**用量只能反推**：桥接的限流计数在内存（`voiceSendTimes`，重启清零）且无查询接口。
+面板从 `state/bridge.log` 的 `[voice] ... 已发送语音` 行反推最近 1 分钟/1 小时条数；
+日志行只有 `HH:MM:SS`（跨零点按「比现在还晚 ⇒ 昨天」纠正），日志本身有 2000 行上限并轮转。
+⇒ **展示时必须标注这是近似值**，不能让操作者以为是权威计数。
+
+**预检的两段式**（`POST /voice-check`）：
+
+| 判据 | 谁算 | 为什么 |
+| --- | --- | --- |
+| 每分钟 / 每小时额度 | 本插件（离线） | 桥接的 `dryRun` 分支**刻意不查** `voiceBudgetCheck`（额度在真发成功后才记账），dryRun 帮不上忙 |
+| 文本字数 / 预计时长 | 本插件（离线） | 合成前唯一的判断手段；按 5 字/秒保守估长 |
+| 路径解析 / 时长 / 体积 / 白名单 | 桥接 `dryRun: true` | 权威结论，别自己复刻一套规则 |
+
 ## 3. 安装与形态
 
 - 插件包目录：`C:\Users\faith\dsh-qq-console\`（独立于桥接仓库，便于单独升级）。
@@ -89,4 +121,5 @@ qq-bridge 自带的控制台（`http://127.0.0.1:3100`，请求头 `x-console-to
 - 不直接写 `config.json`（除了「硬开关」需要读写任务状态）。
 - 不改 SnowLuma 的配置：它的 `runtime.json` 会被**运行中的内存值写回**（实测：我改过的
   `hookAutoLoad: true` 被它自己覆盖回 false），要改必须先停 SnowLuma。插件最多做「SnowLuma 进程状态」的展示。
-- 不实现「群号备注 / 自动发现群名」等花活；先保证四组控件可靠。
+- 不实现「群号备注 / 自动发现群名」等花活；先保证这几组控件可靠。
+- 不去复刻桥接的语音校验规则（时长/体积/路径）：那是桥接的权威判断，面板只做转发 + 额度估算。
